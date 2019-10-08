@@ -1,6 +1,7 @@
 {
-    "commandername": "commandername",
+    "commandername": "commanderName",
     "currentSystem": "currentSystem",
+    "currentStation": "currentStation",
     "timestamp": "timestamp",
     "event": "Bounty",
     "Rewards": [

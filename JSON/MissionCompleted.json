@@ -1,45 +1,48 @@
 {
+    "commandername": "commanderName",
+    "currentSystem": "currentSystem",
+    "currentStation": "currentStation",
     "timestamp": "timestamp",
     "event": "MissionCompleted",
     "Faction": "Faction",
     "Name": "Name",
     "MissionID": 0,
-    "TargetFaction": "Exioce Allied PLC",
-    "DestinationSystem": "Exioce",
-    "DestinationStation": "Fort Lawrence",
-    "Reward": 190402,
+    "TargetFaction": "TargetFaction",
+    "DestinationSystem": "DestinationSystem",
+    "DestinationStation": "DestinationStation",
+    "Reward": 0,
     "FactionEffects": [
         {
-            "Faction": "The Order of Mobius",
+            "Faction": "Faction",
             "Effects": [
                 {
-                    "Effect": "$MISSIONUTIL_Interaction_Summary_EP_up;",
-                    "Effect_Localised": "The economic status of $#MinorFaction; has improved in the $#System; system.",
-                    "Trend": "UpGood"
+                    "Effect": "Effect",
+                    "Effect_Localised": "Effect_Localised",
+                    "Trend": "Trend"
                 }
             ],
             "Influence": [
                 {
-                    "SystemAddress": 2871051167145,
-                    "Trend": "UpGood",
-                    "Influence": "++"
+                    "SystemAddress": 0,
+                    "Trend": "Trend",
+                    "Influence": ""
                 }
             ],
-            "ReputationTrend": "UpGood",
-            "Reputation": "++"
+            "ReputationTrend": "ReputationTrend",
+            "Reputation": ""
         },
         {
-            "Faction": "Exioce Allied PLC",
+            "Faction": "Faction",
             "Effects": [
                 {
-                    "Effect": "$MISSIONUTIL_Interaction_Summary_EP_up;",
-                    "Effect_Localised": "The economic status of $#MinorFaction; has improved in the $#System; system.",
-                    "Trend": "UpGood"
+                    "Effect": "Effect",
+                    "Effect_Localised": "Effect_Localised",
+                    "Trend": "Trend"
                 }
             ],
             "Influence": [],
-            "ReputationTrend": "UpGood",
-            "Reputation": "++"
+            "ReputationTrend": "ReputationTrend",
+            "Reputation": ""
         }
     ]
 }
