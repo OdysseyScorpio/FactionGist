@@ -1,12 +1,13 @@
 {
-  "name": "FactionGist",
+  "name": "factiongist",
   "version": "0.0.0",
   "description": "ED:MC Plugin and NodeJS Server to post Faction based events to Discord",
   "main": "./Server/server.js",
   "author": "Odyssey Scorpio",
   "licence": "MIT License,  Copyright (c) 2019 OdysseyScorpio",
   "scripts": {
-    "run": "node ./Server/server.js"
+    "run": "node ./Server/server.js",
+    "start": "node server.js"
   },
   "dependencies": {
     "discord.js": "^11.5.1",
@@ -14,5 +15,15 @@
     "jmespath": "^0.15.0",
     "path": "^0.12.7",
     "request": "^2.88.0"
-  }
+  },
+  "devDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OdysseyScorpio/FactionGist.git"
+  },
+  "license": "(ISC)",
+  "bugs": {
+    "url": "https://github.com/OdysseyScorpio/FactionGist/issues"
+  },
+  "homepage": "https://github.com/OdysseyScorpio/FactionGist#readme"
 }
