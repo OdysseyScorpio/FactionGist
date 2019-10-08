@@ -1,0 +1,15 @@
+{
+    "commandername": "commandername",
+    "currentSystem": "currentSystem",
+    "timestamp": "timestamp",
+    "event": "Bounty",
+    "Rewards": [
+        {
+            "Faction": "Faction",
+            "Reward": 0
+        }
+    ],
+    "Target": "Target",
+    "TotalReward": 0,
+    "VictimFaction": "VictimFaction"
+}
