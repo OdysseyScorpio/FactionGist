@@ -13,6 +13,7 @@ var auth = require('./JSON/auth.json')
 var adminID = require('./JSON/adminID.json')
 var allFactions = [];
 var eventsToListenFor = [];
+var maths = require("mathjs")
 app.use(bodyParser.json());
 const bot = new Discord.Client();
 bot.login(auth.token);
@@ -52,9 +53,6 @@ fs.readdir(dirname, function (err, filenames) {
                             addToLocations.push(response[R].name)
                         }
                     }
-                    //JSONcontent[J].LocationsScope = JSONcontent[J].LocationsScope.concat(addToLocations)
-                    //console.log(JSON.stringify(addToLocations))
-                    //return
                 }
             }
             allFactions.push(JSON.parse(content));
@@ -68,7 +66,6 @@ app.get('/version', function (req, res) {
     res.end('0.0.2b');
 })
 app.get('/download', function (req, res) {
-    //currentVersion = fs.readFileSync('./load.py', 'utf8');
     var options = {
         root: path.join(__dirname, './Plugin'),
         dotfiles: 'deny',
@@ -86,7 +83,6 @@ app.get('/download', function (req, res) {
     })
 })
 app.get('/load.py', function (req, res) {
-    //currentVersion = fs.readFileSync('./load.py', 'utf8');
     console.log(JSON.stringify(allFactions))
     var options = {
         root: path.join(__dirname, './Plugin'),
@@ -115,8 +111,8 @@ app.post('/events', function (req, res) {
         systems = require('./JSON/systems.json')
         CMDR = event.commandername
         searchString = '[? systemAddress == `' + event.SystemAddress + '`].StarSystem'
-        results = jmespath.search(systems, searchString)
-        if (results.length == 0) {
+        allFactions = jmespath.search(systems, searchString)
+        if (allFactions.length == 0) {
             newSystem = {
                 "systemAddress": event.SystemAddress,
                 "StarSystem": event.StarSystem
@@ -129,45 +125,79 @@ app.post('/events', function (req, res) {
     }
 
     console.log(JSON.stringify(event))
-    searchString = '[*].Actions[? Event == `"' + event.event + '"`]'
-    var results = jmespath.search(allFactions, searchString)
-    sendMessage = false
-    // if (eventsToListenFor.includes(event.event)) {
 
-    for (a = 0; a <= results.length - 1; a++) {
-        console.log("Factions want to know about this event")
-        for (b = 0; b <= results[a].length - 1; b++) {
+    for (a = 0; a <= allFactions.length - 1; a++) {
+        theFaction = allFactions[a]
+        for (b = 0; b <= theFaction.Actions.length - 1; b++) {
+            theAction = theFaction.Actions[b]
             try {
-                who = results[a][b].Who //Who can report to this faction
-                if (who == "everyone"  ||  event.reportingFaction.includes(who)) { //Everyone or faction only
-                    LocationsToCheck = results[a][b].LocationsToCheck //position in event JSON location is at
+                who = theAction.Who //Who can report to this faction
+                if (who == "everyone" || event.reportingFaction.includes(who)) { //Everyone or faction only
+                    LocationsToCheck = theAction.LocationsToCheck //position in event JSON location is at
                     systemAddress = jmespath.search(event, LocationsToCheck) //assume is systemAddress
                     resolveNameSearch = resolveSystemName(systemAddress) //then convert to System Name 
-                    if (results[a][b].LocationsScope.includes(resolveNameSearch)) { 
-                        try {
-                            message = replaceVariables(results[a][b].Message, event)
-                            server = results[a][b].ServerChannel
-                            when = results[a][b].When.toString().toLowerCase()
-                            sendMessaage(message, server, when)
-                        } catch (a) {
-                            console.log("Not send message action")
-                        }
-                        try {
-                            SaveDataBasedOn = results[a][b].SaveDataBasedOn
-                            saveString = ""
-                            for (s = 0; s <= SaveDataBasedOn.length - 1; s++) {
-                                saveString +=  replaceVariables(SaveDataBasedOn[s], event)
+                    if (theAction.Event == event.event && theAction.LocationsScope.includes(resolveNameSearch)) {
+                        sendAMessage = theAction.Message != null
+                        saveDataBasedOn = theAction.SaveDataBasedOn != null
+                        additionalDataFrom = theAction.AdditionalDataFrom != null
+
+                        if (additionalDataFrom) {
+                            try {
+                                matchingEventSearchString = '[@.Actions[? Event == `"' + theAction.AdditionalDataFrom + '"`]][0][0]'
+                                matchingEvent = jmespath.search(theFaction, matchingEventSearchString)
+                                dataBasedOn = matchingEvent.SaveDataBasedOn
+                                event.AdditionalDataFrom = theAction.AdditionalDataFrom
+                                eventToRetreive = getSavedEventObject(dataBasedOn, event, true)
+                                searchString = '[[? matchString == `"' + eventToRetreive.matchString + '"`].event][0][0]'
+                                savedEvents = require('./JSON/savedEvents.json')
+                                var result = jmespath.search(savedEvents, searchString)
+                                event[result.event] = result
+                                for(s = 0;s<=savedEvents.length -1 ; s++){
+                                    if(savedEvents[s].matchString == eventToRetreive.matchString){
+                                        savedEvents.splice(s, 1) 
+                                        if(savedEvents.length==0){
+                                            stringToSave = []
+                                        } else {
+                                            stringToSave = JSON.stringify(savedEvents)
+                                        }
+                                        fs.writeFile('./JSON/savedEvents.json', stringToSave, 'utf8', function (err) {
+                                            if (err) throw err;
+                                        });
+                                        break;
+                                    }
+                                }
+                                event.AdditionalDataFrom = undefined
+                            } catch (e) {
+                                console.log("Not additionalInfo action")
                             }
-                            server = results[a][b].ServerChannel
-                            saveString += server
-                            
-                            console.log(saveString)
-                            
-                            
-                        } catch (a) {
-                            console.log("Not send message action")
                         }
+                        if (sendAMessage) {
+                            try {
+                                message = replaceVariables(theAction.Message, event)
+                                server = theAction.ServerChannel
+                                when = theAction.When.toString().toLowerCase()
+                                sendMessage(message, server, when)
+                            } catch (e) {
+                                console.log("Not send message action")
+                            }
+                        }
+                        if (saveDataBasedOn) {
+                            try {
+                                dataBasedOn = theAction.SaveDataBasedOn //[[? Event == `"MarketBuy"`]][0][0]
+                                eventToSave = getSavedEventObject(dataBasedOn, event, false)
+                                savedEvents = require('./JSON/savedEvents.json')
+                                savedEvents.push(eventToSave)
+                                fs.writeFile('./JSON/savedEvents.json', JSON.stringify(savedEvents), 'utf8', function (err) {
+                                    if (err) throw err;
+                                });
+                            } catch (e) {
+                                console.log("Not send message action")
+                            }
+                        }
+
+
                     }
+
                 }
             }
             catch (e) {
@@ -183,12 +213,12 @@ function replaceVariables(message, inputJSON) {
     do {
         if ((message.indexOf("$") == -1)) { break }
 
-        var variable = message.toString().match(/\$[^\s\,\|\/]*/)[0].replace("$", "")
+        var variable = message.toString().match(/\$[^\s\,\|\/\)\()]*/)[0].replace("$", "")
         var searchString = "@." + variable
-        var results = jmespath.search(inputJSON, searchString)
-        if (results == null) { continue }
-        results = (resolveSystemName(results) || results)
-        message = message.replace("$" + variable, results)
+        var allFactions = jmespath.search(inputJSON, searchString)
+        if (allFactions == null) { allFactions = variable }
+        allFactions = (resolveSystemName(allFactions) || allFactions)
+        message = message.replace("$" + variable, allFactions)
         console.log(message)
 
     } while (message.indexOf("$") > 0)
@@ -206,12 +236,44 @@ function resolveSystemName(systemAddress) {
 }
 
 function sendMessage(message, server, when) {
+    if (message.indexOf("calc(") > -1) {
+        mathsString = message.substring(message.indexOf("calc(") + 5, message.indexOf(")", message.indexOf("calc")))
+        mathsValue = maths.evaluate(mathsString);
+        message = message.replace("calc(" + mathsString + ")", mathsValue)
+    }
     if (when == "now") {
         console.log("sending now")
         console.log(message)
         channel = bot.channels.get(server);
         channel.sendMessage(message);
     }
+}
+
+function getSavedEventObject(dataBasedOn, event, loadEvent) {
+    saveString = ""
+    if (loadEvent) {
+        eventName = event.event
+        loadEvent = event.AdditionalDataFrom
+        event.event = loadEvent
+        event.AdditionalDataFrom = eventName
+    }
+    for (s = 0; s <= dataBasedOn.length - 1; s++) {
+        saveString += replaceVariables(dataBasedOn[s], event)
+    }
+    server = theAction.ServerChannel
+    saveString += server
+    saveString = event.event + saveString
+    eventToSave = {
+        matchString: saveString,
+        event
+    }
+    if (loadEvent) {
+        eventName = event.event
+        loadEvent = event.AdditionalDataFrom
+        event.event = loadEvent
+        event.event = eventName
+    }
+    return eventToSave
 }
 
 var port = process.env.PORT || 80
