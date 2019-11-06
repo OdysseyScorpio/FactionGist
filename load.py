@@ -14,7 +14,37 @@ import webbrowser
 
 this = sys.modules[__name__]
 this.apiURL = "http://factiongist.herokuapp.com"
-FG_VERSION = "0.0.2"
+FG_VERSION = "0.0.3"
+availableFactions = tk.StringVar()
+try:
+    this_fullpath = os.path.realpath(__file__)
+    this_filepath, this_extension = os.path.splitext(this_fullpath)
+    config_file = this_filepath + "config.json"
+    with open(config_file) as f:
+        data = json.load(f)
+    availableFactions.set(data)
+except:
+    availableFactions.set("everyone")
+if(availableFactions.get() == "everyone"):
+    msginfo = ['Please update your Reporting Faction.',
+               '\nYou can report to one or many factions,'
+               'simply separate each faction with a comma.\n'
+               '\nFile > Settings > FactionGist']
+    tkMessageBox.showinfo("Reporting Factions", "\n".join(msginfo))
+
+
+def plugin_app(parent):
+    this.parent = parent
+    this.frame = tk.Frame(parent)
+    filter_update()
+    return this.frame
+
+
+def filter_update():
+    this.parent.after(300000, filter_update)
+    response = requests.get(this.apiURL + "/listeningFor")
+    if(response.status_code == 200):
+        this.listening = response.content
 
 
 def plugin_start(plugin_dir):
@@ -26,14 +56,22 @@ def plugin_start(plugin_dir):
 def plugin_prefs(parent):
     PADX = 10  # formatting
     frame = nb.Frame(parent)
-    frame.columnconfigure(1, weight=1)
+    frame.columnconfigure(5, weight=1)
     HyperlinkLabel(frame, text='FactionGist GitHub', background=nb.Label().cget('background'),
                    url='https://github.com/OdysseyScorpio/FactionGist', underline=True).grid(columnspan=2, padx=PADX, sticky=tk.W)
     nb.Label(frame, text="FactionGist - crazy-things-might-happen-pre-pre-alpha release Version {VER}".format(
         VER=FG_VERSION)).grid(columnspan=2, padx=PADX, sticky=tk.W)
     nb.Label(frame).grid()  # spacer
-    nb.Button(frame, text="UPGRADE", command=upgrade_callback).grid(
-        columnspan=2, padx=PADX, sticky=tk.W)
+    nb.Button(frame, text="UPGRADE", command=upgrade_callback).grid(row=10, column=0,
+                                                                    columnspan=2, padx=PADX, sticky=tk.W)
+
+    nb.lblReportingFactions = tk.Label(frame)
+    nb.lblReportingFactions.grid(
+        row=3, column=0, columnspan=2, padx=PADX, sticky=tk.W)
+    nb.lblReportingFactions.config(text='Factions I am supporting')
+    nb.Entry1 = tk.Entry(frame, textvariable=availableFactions)
+    nb.Entry1.grid(row=4, column=0, columnspan=2, padx=PADX, sticky=tk.W+tk.E)
+
     return frame
 
 
@@ -75,45 +113,29 @@ def upgrade_callback():
         tkMessageBox.showinfo("Upgrade status", "\n".join(msginfo))
 
 
-def news_update():
-    this.parent.after(300000, news_update)
-    try:
-        response = requests.get(this.apiURL + "/news")
-        updatemsg = json.loads(response.content).get("update").get("update")
-        link = json.loads(response.content).get("update").get("link")
-        versionmsg = json.loads(response.content).get(
-            "update").get("versionmsg")
-        motd = json.loads(response.content).get("update").get("motd")
-        response = requests.get(this.apiURL + "/listening")
-        this.listening = json.loads(response.content)
-        if (response.status_code == 200):
-            this.news_headline['text'] = updatemsg
-            this.news_headline['url'] = link
-            statusmsg = "%s%s%s%s" % (versionmsg, this.FG_VERSION, " ", motd)
-            this.status['text'] = statusmsg
-        else:
-            this.news_headline['text'] = "News refresh Failed"
-    except:
-        this.news_headline['text'] = "Could not update news from FactionGist server"
-
-
 def dashboard_entry(cmdr, is_beta, entry):
     this.cmdr = cmdr
 
 
 def journal_entry(cmdr, is_beta, system, station, entry, state):
-    # Currently only post MissionComplete and Docked events
-    # ToDo Add in Trading, Bounty and Carto Events
-    # if entry['event'] in ['MissionComplete', 'Docked']:
-    this.cmdr = cmdr
-    entry['commandername'] = cmdr
-    entry['pluginversion'] = FG_VERSION
-    transmit_json = json.dumps(entry)
-    url_jump = this.apiURL + '/events'
-    headers = {'content-type': 'application/json'}
-    response = requests.post(
-        url_jump, data=transmit_json, headers=headers, timeout=7)
+    if entry['event'] in this.listening:
+        entry['commanderName'] = cmdr
+        entry['pluginVersion'] = FG_VERSION
+        entry['currentSystem'] = system
+        entry['currentStation'] = station
+        entry['reportingFactions'] = [availableFactions.get()]
+        transmit_json = json.dumps(entry)
+        url_jump = this.apiURL + '/events'
+        headers = {'content-type': 'application/json'}
+        response = requests.post(
+            url_jump, data=transmit_json, headers=headers, timeout=7)
 
 
 def plugin_stop():
-    sys.stderr.writelines("Good bye commander")
+    sys.stderr.writelines("\nGood bye commander\n")
+    config = availableFactions.get()
+    this_fullpath = os.path.realpath(__file__)
+    this_filepath, this_extension = os.path.splitext(this_fullpath)
+    config_file = this_filepath + "config.json"
+    with open(config_file, 'w') as f:
+        json.dump(config, f)
