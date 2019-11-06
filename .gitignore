@@ -1,0 +1,9 @@
+node_modules/
+JSON/auth.json
+JSON/adminID.json
+.gitignore
+.vscode/
+load.py.lnk
+old.py
+package-lock.json
+push.sh
